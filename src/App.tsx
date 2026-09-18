@@ -51,7 +51,7 @@ function App() {
         setError("");
 
         const response = await fetch(
-          "http://localhost:5000/api/products"
+          "http://https://amc-server-azure.vercel.app/"
         );
 
         if (!response.ok) {
