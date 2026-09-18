@@ -50,9 +50,10 @@ function App() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          "http://https://amc-server-azure.vercel.app/"
-        );
+       
+const response = await fetch(
+  "https://amc-server-azure.vercel.app/api/products"
+);
 
         if (!response.ok) {
           throw new Error("Products load nahi huin");
