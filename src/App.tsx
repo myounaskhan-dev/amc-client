@@ -41,7 +41,7 @@ function App() {
   });
 
   // =========================
-  // LOAD PRODUCTS
+  // LOAD PRODUCTS FROM BACKEND
   // =========================
 
   useEffect(() => {
@@ -50,18 +50,21 @@ function App() {
         setLoading(true);
         setError("");
 
-       
-const response = await fetch(
-  "https://amc-server-azure.vercel.app/api/products"
-);
+        const response = await fetch(
+          "https://amc-server-azure.vercel.app/api/products"
+        );
 
         if (!response.ok) {
-          throw new Error("Products load nahi huin");
+          throw new Error(`Server error: ${response.status}`);
         }
 
         const data = await response.json();
 
         console.log("PRODUCTS FROM BACKEND:", data);
+
+        if (!Array.isArray(data)) {
+          throw new Error("API response is not an array");
+        }
 
         const formattedProducts: Product[] = data.map(
           (item: any) => ({
@@ -95,14 +98,19 @@ const response = await fetch(
   // =========================
 
   const addToCart = (product: Product) => {
+    if (product.stock !== undefined && product.stock <= 0) {
+      alert("This product is out of stock.");
+      return;
+    }
+
     setCart((previousCart) => {
       const existingProduct = previousCart.find(
-        (item) => String(item._id) === String(product._id)
+        (item) => item._id === product._id
       );
 
       if (existingProduct) {
         return previousCart.map((item) =>
-          String(item._id) === String(product._id)
+          item._id === product._id
             ? {
                 ...item,
                 quantity: item.quantity + 1,
@@ -127,17 +135,14 @@ const response = await fetch(
   // CHANGE QUANTITY
   // =========================
 
-  const changeQuantity = (
-    id: string,
-    amount: number
-  ) => {
+  const changeQuantity = (id: string, amount: number) => {
     setCart((previousCart) =>
       previousCart
         .map((item) =>
-          String(item._id) === String(id)
+          item._id === id
             ? {
                 ...item,
-                quantity: item.quantity + amount,
+                quantity: Math.max(0, item.quantity + amount),
               }
             : item
         )
@@ -151,9 +156,7 @@ const response = await fetch(
 
   const removeFromCart = (id: string) => {
     setCart((previousCart) =>
-      previousCart.filter(
-        (item) => String(item._id) !== String(id)
-      )
+      previousCart.filter((item) => item._id !== id)
     );
   };
 
@@ -167,8 +170,7 @@ const response = await fetch(
       .includes(search.toLowerCase());
 
     const matchesCategory =
-      category === "All" ||
-      product.category === category;
+      category === "All" || product.category === category;
 
     return matchesSearch && matchesCategory;
   });
@@ -180,9 +182,7 @@ const response = await fetch(
   const categories = [
     "All",
     ...Array.from(
-      new Set(
-        products.map((product) => product.category)
-      )
+      new Set(products.map((product) => product.category))
     ),
   ];
 
@@ -196,8 +196,7 @@ const response = await fetch(
   );
 
   const totalPrice = cart.reduce(
-    (total, item) =>
-      total + item.price * item.quantity,
+    (total, item) => total + item.price * item.quantity,
     0
   );
 
@@ -238,9 +237,7 @@ const response = await fetch(
       return;
     }
 
-    // WhatsApp number:
-    // Pakistan country code = 92
-    // 03xxxxxxxxx becomes 923xxxxxxxxx
+    // Apna WhatsApp number yahan check karein.
     const whatsappNumber = "923719134200";
 
     const orderDetails = cart
@@ -271,19 +268,19 @@ Total: Rs. ${totalPrice.toLocaleString()}
         message
       )}`;
 
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
     setShowCheckout(false);
   };
 
+  // =========================
+  // MAIN UI
+  // =========================
+
   return (
     <div className="min-h-screen bg-black text-white">
 
-      {/* ================= NAVBAR ================= */}
+      {/* NAVBAR */}
 
       <nav className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-yellow-500/30 bg-black/95 px-5 py-5 backdrop-blur md:px-10">
 
@@ -295,38 +292,27 @@ Total: Rs. ${totalPrice.toLocaleString()}
         </a>
 
         <div className="flex flex-wrap items-center gap-3 md:gap-5">
-
-          <a
-            href="#"
-            className="hover:text-yellow-400"
-          >
+          <a href="#" className="hover:text-yellow-400">
             Home
           </a>
 
-          <a
-            href="#products"
-            className="hover:text-yellow-400"
-          >
+          <a href="#products" className="hover:text-yellow-400">
             Products
           </a>
 
           <button
             type="button"
-            onClick={() =>
-              setShowCart((previous) => !previous)
-            }
-            className="rounded-lg bg-yellow-400 px-4 py-2 font-bold text-black transition hover:bg-yellow-300"
+            onClick={() => setShowCart((previous) => !previous)}
+            className="rounded-lg bg-yellow-400 px-4 py-2 font-bold text-black hover:bg-yellow-300"
           >
             Cart ({totalItems})
           </button>
-
         </div>
       </nav>
 
-      {/* ================= HERO ================= */}
+      {/* HERO */}
 
       <section className="px-5 py-20 text-center md:py-28">
-
         <p className="mb-4 text-sm tracking-widest text-yellow-400">
           WELCOME TO ALI MOBILE CORNER
         </p>
@@ -345,22 +331,19 @@ Total: Rs. ${totalPrice.toLocaleString()}
 
         <a
           href="#products"
-          className="mt-8 inline-block rounded-lg bg-yellow-400 px-7 py-3 font-bold text-black transition hover:bg-yellow-300"
+          className="mt-8 inline-block rounded-lg bg-yellow-400 px-7 py-3 font-bold text-black hover:bg-yellow-300"
         >
           Shop Now
         </a>
-
       </section>
 
-      {/* ================= PRODUCTS ================= */}
+      {/* PRODUCTS */}
 
       <section
         id="products"
         className="mx-auto max-w-7xl px-5 py-12"
       >
-
         <div className="mb-8 text-center">
-
           <h2 className="text-3xl font-bold text-yellow-400 md:text-4xl">
             Our Products
           </h2>
@@ -368,36 +351,29 @@ Total: Rs. ${totalPrice.toLocaleString()}
           <p className="mt-2 text-gray-400">
             Choose your favorite mobile accessories
           </p>
-
         </div>
 
         {/* SEARCH */}
 
         <div className="mx-auto mb-6 max-w-xl">
-
           <input
             type="text"
             placeholder="Search products..."
             value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
-            className="w-full rounded-lg border border-yellow-500/30 bg-zinc-900 p-3 text-white outline-none transition focus:border-yellow-400"
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-yellow-500/30 bg-zinc-900 p-3 text-white outline-none focus:border-yellow-400"
           />
-
         </div>
 
         {/* CATEGORIES */}
 
         <div className="mb-10 flex flex-wrap justify-center gap-3">
-
           {categories.map((item) => (
-
             <button
               key={item}
               type="button"
               onClick={() => setCategory(item)}
-              className={`rounded-lg px-4 py-2 font-semibold transition ${
+              className={`rounded-lg px-4 py-2 font-semibold ${
                 category === item
                   ? "bg-yellow-400 text-black"
                   : "bg-zinc-800 text-white hover:bg-zinc-700"
@@ -405,20 +381,16 @@ Total: Rs. ${totalPrice.toLocaleString()}
             >
               {item}
             </button>
-
           ))}
-
         </div>
 
         {/* LOADING */}
 
         {loading && (
           <div className="py-16 text-center">
-
             <p className="text-lg text-yellow-400">
               Loading products...
             </p>
-
           </div>
         )}
 
@@ -426,193 +398,147 @@ Total: Rs. ${totalPrice.toLocaleString()}
 
         {!loading && error && (
           <div className="rounded-lg border border-red-500/30 bg-red-950/30 p-5 text-center">
-
-            <p className="text-red-400">
-              {error}
-            </p>
+            <p className="text-red-400">{error}</p>
 
             <p className="mt-2 text-sm text-gray-400">
               Make sure your backend server is running.
             </p>
 
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-lg bg-yellow-400 px-5 py-2 font-bold text-black"
+            >
+              Try Again
+            </button>
           </div>
         )}
 
-        {/* PRODUCTS */}
+        {/* NO PRODUCTS */}
 
-        {!loading &&
-          !error &&
-          filteredProducts.length === 0 && (
+        {!loading && !error && filteredProducts.length === 0 && (
+          <div className="py-16 text-center">
+            <p className="text-xl text-gray-400">
+              No products found.
+            </p>
+          </div>
+        )}
 
-            <div className="py-16 text-center">
+        {/* PRODUCT CARDS */}
 
-              <p className="text-xl text-gray-400">
-                No products found.
-              </p>
+        {!loading && !error && filteredProducts.length > 0 && (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredProducts.map((product) => (
+              <div
+                key={product._id}
+                className="overflow-hidden rounded-2xl border border-yellow-500/20 bg-zinc-900 transition hover:-translate-y-1 hover:border-yellow-400/60"
+              >
+                {/* IMAGE */}
 
-            </div>
-          )}
-
-        {!loading &&
-          !error &&
-          filteredProducts.length > 0 && (
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-              {filteredProducts.map((product) => (
-
-                <div
-                  key={product._id}
-                  className="overflow-hidden rounded-2xl border border-yellow-500/20 bg-zinc-900 transition duration-300 hover:-translate-y-1 hover:border-yellow-400/60"
-                >
-
-                  {/* IMAGE */}
-
-                  <div className="h-56 overflow-hidden bg-zinc-800">
-
-                    {product.image ? (
-
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="h-full w-full object-cover transition duration-300 hover:scale-105"
-                      />
-
-                    ) : (
-
-                      <div className="flex h-full items-center justify-center text-gray-500">
-                        No Image
-                      </div>
-
-                    )}
-
-                  </div>
-
-                  {/* CONTENT */}
-
-                  <div className="p-5">
-
-                    <p className="mb-2 text-sm text-yellow-400">
-                      {product.category}
-                    </p>
-
-                    <h3 className="text-xl font-bold">
-                      {product.name}
-                    </h3>
-
-                    {product.description && (
-
-                      <p className="mt-2 line-clamp-2 text-sm text-gray-400">
-                        {product.description}
-                      </p>
-
-                    )}
-
-                    <div className="mt-5 flex items-center justify-between gap-3">
-
-                      <p className="text-lg font-bold text-yellow-400">
-                        Rs.{" "}
-                        {product.price.toLocaleString()}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          addToCart(product)
-                        }
-                        disabled={
-                          product.stock !== undefined &&
-                          product.stock <= 0
-                        }
-                        className="rounded-lg bg-yellow-400 px-4 py-2 font-bold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-300"
-                      >
-                        {product.stock !== undefined &&
-                        product.stock <= 0
-                          ? "Out of Stock"
-                          : "Add to Cart"}
-                      </button>
-
+                <div className="h-56 overflow-hidden bg-zinc-800">
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-gray-500">
+                      No Image
                     </div>
-
-                  </div>
-
+                  )}
                 </div>
 
-              ))}
+                {/* PRODUCT DETAILS */}
 
-            </div>
-          )}
+                <div className="p-5">
+                  <p className="mb-2 text-sm text-yellow-400">
+                    {product.category}
+                  </p>
 
+                  <h3 className="text-xl font-bold">
+                    {product.name}
+                  </h3>
+
+                  {product.description && (
+                    <p className="mt-2 line-clamp-2 text-sm text-gray-400">
+                      {product.description}
+                    </p>
+                  )}
+
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <p className="text-lg font-bold text-yellow-400">
+                      Rs. {product.price.toLocaleString()}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => addToCart(product)}
+                      disabled={
+                        product.stock !== undefined &&
+                        product.stock <= 0
+                      }
+                      className="rounded-lg bg-yellow-400 px-4 py-2 font-bold text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-300"
+                    >
+                      {product.stock !== undefined &&
+                      product.stock <= 0
+                        ? "Out of Stock"
+                        : "Add to Cart"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* ================= CART ================= */}
+      {/* CART */}
 
       {showCart && (
-
         <section className="mx-auto max-w-5xl px-5 py-8">
-
           <div className="rounded-xl border border-yellow-500/30 bg-zinc-900 p-5">
-
             <div className="flex items-center justify-between gap-4">
-
               <h2 className="text-2xl font-bold text-yellow-400">
                 Your Cart
               </h2>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowCart(false)
-                }
+                onClick={() => setShowCart(false)}
                 className="text-gray-400 hover:text-white"
               >
                 Close ✕
               </button>
-
             </div>
 
             {cart.length === 0 ? (
-
               <p className="mt-5 text-gray-400">
                 Your cart is empty. Add some products!
               </p>
-
             ) : (
-
               <>
-
                 <div className="mt-5 space-y-4">
-
                   {cart.map((item) => (
-
                     <div
                       key={item._id}
                       className="flex flex-col gap-4 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-
                       <div className="min-w-[150px]">
-
                         <h3 className="font-semibold">
                           {item.name}
                         </h3>
 
                         <p className="text-sm text-gray-400">
-                          Rs.{" "}
-                          {item.price.toLocaleString()}{" "}
-                          each
+                          Rs. {item.price.toLocaleString()} each
                         </p>
-
                       </div>
 
                       <div className="flex items-center gap-3">
-
                         <button
                           type="button"
                           onClick={() =>
-                            changeQuantity(
-                              item._id,
-                              -1
-                            )
+                            changeQuantity(item._id, -1)
                           }
                           className="rounded bg-zinc-700 px-3 py-1 hover:bg-zinc-600"
                         >
@@ -626,114 +552,82 @@ Total: Rs. ${totalPrice.toLocaleString()}
                         <button
                           type="button"
                           onClick={() =>
-                            changeQuantity(
-                              item._id,
-                              1
-                            )
+                            changeQuantity(item._id, 1)
                           }
-                          className="rounded bg-zinc-700 px-3 py-1 hover:bg-zinc-600"
+                          disabled={
+                            item.stock !== undefined &&
+                            item.quantity >= item.stock
+                          }
+                          className="rounded bg-zinc-700 px-3 py-1 hover:bg-zinc-600 disabled:opacity-50"
                         >
                           +
                         </button>
-
                       </div>
 
                       <p className="font-bold text-yellow-400">
-                        Rs.{" "}
-                        {(
-                          item.price *
-                          item.quantity
+                        Rs. {(
+                          item.price * item.quantity
                         ).toLocaleString()}
                       </p>
 
                       <button
                         type="button"
-                        onClick={() =>
-                          removeFromCart(item._id)
-                        }
+                        onClick={() => removeFromCart(item._id)}
                         className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold hover:bg-red-500"
                       >
                         Remove
                       </button>
-
                     </div>
-
                   ))}
-
                 </div>
 
                 <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
                   <h3 className="text-xl font-bold">
-                    Total: Rs.{" "}
-                    {totalPrice.toLocaleString()}
+                    Total: Rs. {totalPrice.toLocaleString()}
                   </h3>
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowCheckout(true)
-                    }
+                    onClick={() => setShowCheckout(true)}
                     className="rounded-lg bg-yellow-400 px-6 py-3 font-bold text-black hover:bg-yellow-300"
                   >
                     Checkout
                   </button>
-
                 </div>
-
               </>
             )}
-
           </div>
-
         </section>
       )}
 
-      {/* ================= CHECKOUT ================= */}
+      {/* CHECKOUT */}
 
       {showCheckout && (
-
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4">
-
           <form
             onSubmit={placeOrder}
             className="my-8 w-full max-w-lg space-y-4 rounded-2xl border border-yellow-500/30 bg-zinc-900 p-6 shadow-2xl"
           >
-
-            {/* HEADER */}
-
             <div className="flex items-center justify-between gap-4">
-
               <h2 className="text-2xl font-bold text-yellow-400">
                 Checkout
               </h2>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowCheckout(false)
-                }
+                onClick={() => setShowCheckout(false)}
                 className="text-xl text-gray-400 hover:text-white"
               >
                 ✕
               </button>
-
             </div>
 
-            {/* TOTAL */}
-
             <p className="text-gray-300">
-
               Total:{" "}
-
               <span className="font-bold text-yellow-400">
-                Rs.{" "}
-                {totalPrice.toLocaleString()}
+                Rs. {totalPrice.toLocaleString()}
               </span>
-
             </p>
-
-            {/* NAME */}
 
             <input
               required
@@ -741,15 +635,10 @@ Total: Rs. ${totalPrice.toLocaleString()}
               placeholder="Your Full Name"
               value={customer.name}
               onChange={(e) =>
-                updateCustomer(
-                  "name",
-                  e.target.value
-                )
+                updateCustomer("name", e.target.value)
               }
               className="w-full rounded-lg border border-yellow-500/30 bg-black p-3 text-white outline-none focus:border-yellow-400"
             />
-
-            {/* PHONE */}
 
             <input
               required
@@ -757,59 +646,42 @@ Total: Rs. ${totalPrice.toLocaleString()}
               placeholder="Phone Number"
               value={customer.phone}
               onChange={(e) =>
-                updateCustomer(
-                  "phone",
-                  e.target.value
-                )
+                updateCustomer("phone", e.target.value)
               }
               className="w-full rounded-lg border border-yellow-500/30 bg-black p-3 text-white outline-none focus:border-yellow-400"
             />
-
-            {/* ADDRESS */}
 
             <textarea
               required
               placeholder="Your Delivery Address"
               value={customer.address}
               onChange={(e) =>
-                updateCustomer(
-                  "address",
-                  e.target.value
-                )
+                updateCustomer("address", e.target.value)
               }
-              className="min-h[120px] w-full rounded-lg border border-yellow-500/30 bg-black p-3 text-white outline-none focus:border-yellow-400"
+              className="min-h-[120px] w-full rounded-lg border border-yellow-500/30 bg-black p-3 text-white outline-none focus:border-yellow-400"
             />
-
-            {/* WHATSAPP */}
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-green-500 py-3 font-bold text-white transition hover:bg-green-400"
+              className="w-full rounded-lg bg-green-500 py-3 font-bold text-white hover:bg-green-400"
             >
               Order on WhatsApp
             </button>
 
-            {/* CANCEL */}
-
             <button
               type="button"
-              onClick={() =>
-                setShowCheckout(false)
-              }
+              onClick={() => setShowCheckout(false)}
               className="w-full rounded-lg bg-gray-700 py-3 font-bold text-white hover:bg-gray-600"
             >
               Cancel
             </button>
-
           </form>
-
         </div>
       )}
 
-      {/* ================= FOOTER ================= */}
+      {/* FOOTER */}
 
       <footer className="border-t border-yellow-500/30 px-5 py-8 text-center">
-
         <h3 className="text-xl font-bold text-yellow-400">
           Ali Mobile Corner
         </h3>
@@ -817,12 +689,9 @@ Total: Rs. ${totalPrice.toLocaleString()}
         <p className="mt-2 text-gray-400">
           Your trusted mobile accessories store.
         </p>
-
       </footer>
-
     </div>
   );
 }
 
 export default App;
-
