@@ -97,7 +97,7 @@ function App() {
   // ADD TO CART
   // =========================
 
-  const addToCart = (product: Product) => {
+ const addToCart = (product: Product) => {
     if (product.stock !== undefined && product.stock <= 0) {
       alert("This product is out of stock.");
       return;
@@ -128,7 +128,8 @@ function App() {
       ];
     });
 
-    alert(`${product.name} added to cart!`);
+    setShowCheckout(true);
+    setShowCart(false);
   };
 
   // =========================
